@@ -1,5 +1,4 @@
 //src/models/otp.model.js
-
 const mongoose = require("mongoose");
 const { OTP_TYPES } = require("../constants/otp");
 
@@ -26,6 +25,7 @@ const otpSchema = new mongoose.Schema(
         expiredAt: {
             type: Date,
             required: true,
+            expires: 0,
         },
     },
     {
@@ -35,8 +35,5 @@ const otpSchema = new mongoose.Schema(
 
 // Hỗ trợ tối ưu truy vấn tìm kiếm OTP của user
 otpSchema.index({ userId: 1, otpType: 1 });
-
-// Tạo TTL index để tự động xóa document khi thời gian hiện tại vượt qua expiredAt
-otpSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("OTPs", otpSchema);

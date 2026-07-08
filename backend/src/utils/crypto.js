@@ -74,6 +74,22 @@ function generateRandomString(length = 16) {
     return crypto.randomBytes(length).toString("hex");
 }
 
+/**
+ * Xáo trộn một chuỗi bằng Thuật toán Fisher-Yates
+ * @param {string} - Chuỗi gốc
+ * @returns {string} Chuỗi sau khi xáo trộn
+ */
+function shuffleString(str) {
+    let arr = str.split("");
+
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+
+    return arr.join("");
+}
+
 module.exports = {
     hashPassword,
     verifyPassword,
@@ -82,4 +98,5 @@ module.exports = {
     encodeBase64,
     decodeBase64,
     generateRandomString,
+    shuffleString,
 };
