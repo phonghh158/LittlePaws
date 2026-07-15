@@ -1,26 +1,6 @@
 // src/utils/crypto.js
-
 const crypto = require("crypto");
-const argon2 = require("argon2");
-
-/**
- * Băm mật khẩu bằng thuật toán Argon2id (Cấu hình mặc định)
- * @param {string} password - Mật khẩu gốc
- * @returns {Promise<string>} Chuỗi mật khẩu đã băm kèm salt và cấu hình tự động
- */
-async function hashPassword(password) {
-    return await argon2.hash(password);
-}
-
-/**
- * Xác thực mật khẩu Argon2id
- * @param {string} hashedPassword - Chuỗi mật khẩu đã băm lấy từ DB
- * @param {string} plainPassword - Mật khẩu người dùng nhập vào
- * @returns {Promise<boolean>} Kết quả khớp hay không
- */
-async function verifyPassword(hashedPassword, plainPassword) {
-    return await argon2.verify(hashedPassword, plainPassword);
-}
+const dayjs = require("dayjs");
 
 /**
  *  Băm chuỗi dữ liệu kết hợp Salt bằng SHA-512
@@ -28,7 +8,7 @@ async function verifyPassword(hashedPassword, plainPassword) {
  * @param {string} salt - Chuỗi muối ngẫu nhiên để tăng tính bảo mật
  * @returns {string} Chuỗi băm SHA-512 định dạng hex
  */
-function hashSHA512(data, salt) {
+function hashSHA512(data, salt = process.env.SHA512_SALT) {
     return crypto
         .createHash("sha512")
         .update(data + salt)
@@ -42,7 +22,7 @@ function hashSHA512(data, salt) {
  * @param {string} hashedData - Chuỗi băm lấy từ DB
  * @returns {boolean} Kết quả khớp hay không
  */
-function verifySHA512(plainText, salt, hashedData) {
+function verifySHA512(plainText, salt = process.env.SHA512_SALT, hashedData) {
     const newHash = hashSHA512(plainText, salt);
     return newHash === hashedData;
 }
@@ -90,6 +70,24 @@ function shuffleString(str) {
     return arr.join("");
 }
 
+/**
+ * Tạo mã bí mật ngẫu nhiên và mã hóa nhiều lần
+ * @returns {string} Mã bí mật
+ */
+function generateSecretKey() {
+    const timestamp = dayjs().format("DD/MM/YYYY - HH:mm:ss.SSS").toString(); // Lấy mốc thời gian hiện tại
+    const randomNumber = Math.floor(Math.random() * 9) + 4; // Random number from 4 to 12. Công thức: Math.floor(Math.random() * (max - min + 1)) + min
+    const randomString = generateRandomString(randomNumber); // Chuỗi ngẫu nhiên randonNumber * 2 ký tự
+    const appName = process.env.APP_NAME || "LittlePaws";
+    const plainText = randomString + appName + timestamp;
+
+    const b64 = encodeBase64(plainText);
+    const salt = process.env.SHA512_SALT || shuffleString(plainText);
+    const secret512 = hashSHA512(b64, salt);
+
+    return secret512;
+}
+
 module.exports = {
     hashPassword,
     verifyPassword,
@@ -99,4 +97,5 @@ module.exports = {
     decodeBase64,
     generateRandomString,
     shuffleString,
+    generateSecretKey,
 };

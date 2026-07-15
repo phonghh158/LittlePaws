@@ -1,24 +1,28 @@
 //src/models/otp.model.js
 const mongoose = require("mongoose");
-const { OTP_TYPES } = require("../constants/otp");
+const { VERIFICATION_TYPES } = require("../constants/verification");
 
-const otpSchema = new mongoose.Schema(
+const verificationSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Users",
             required: true,
         },
-        otpType: {
+        deviceId: {
             type: String,
-            enum: Object.values(OTP_TYPES),
+            required: true,
+        },
+        verificationType: {
+            type: String,
+            enum: Object.values(VERIFICATION_TYPES),
             required: true,
         },
         otpCode: {
             type: String,
             required: true,
         },
-        deviceId: {
+        token: {
             type: String,
             required: true,
         },

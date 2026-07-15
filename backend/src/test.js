@@ -8,3 +8,5 @@ let s = "5235a";
 console.log(s[s.length - 1]);
 
 console.log(dayjs() > dayjs().add(1, "s"));
+
+console.log(dayjs().format("DD/MM/YYYY - HH:mm:ss.SSS").toString());

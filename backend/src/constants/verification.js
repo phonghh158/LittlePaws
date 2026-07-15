@@ -1,5 +1,5 @@
 //src/constants/otp.js
-const OTP_TYPES = {
+const VERIFICATION_TYPES = {
     VERIFY_ACCOUNT: "VERIFY_ACCOUNT",
     RESET_PASSWORD: "RESET_PASSWORD",
     VERIFY_DEVICE: "VERIFY_DEVICE",
@@ -7,5 +7,5 @@ const OTP_TYPES = {
     OWNER_ACCEPT_INVITE: "OWNER_ACCEPT_INVITE",
 };
 module.exports = {
-    OTP_TYPES,
+    VERIFICATION_TYPES,
 };

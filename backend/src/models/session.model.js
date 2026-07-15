@@ -1,31 +1,34 @@
-//src/models/otp.model.js
-
+// src/models/session.model.js
 const mongoose = require("mongoose");
-const { OTP_TYPES } = require("../constants/otp");
+const Schema = mongoose.Schema;
 
-const otpSchema = new mongoose.Schema(
+const sessionSchema = new Schema(
     {
         userId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
+            type: Schema.Types.ObjectId,
+            ref: "User",
             required: true,
         },
-        otpType: {
-            type: String,
-            enum: Object.values(OTP_TYPES),
-            required: true,
-        },
-        otpCode: {
+        refreshToken: {
             type: String,
             required: true,
         },
         deviceId: {
             type: String,
-            required: true,
+            default: "",
+        },
+        userAgent: {
+            type: String,
+            default: "",
+        },
+        ipAddress: {
+            type: String,
+            default: "",
         },
         expiredAt: {
             type: Date,
             required: true,
+            expires: 0,
         },
     },
     {
@@ -33,10 +36,10 @@ const otpSchema = new mongoose.Schema(
     },
 );
 
-// Hỗ trợ tối ưu truy vấn tìm kiếm OTP của user
-otpSchema.index({ userId: 1, otpType: 1 });
+// Index tìm kiếm nhanh danh sách phiên đăng nhập của người dùng
+sessionSchema.index({ userId: 1 });
 
-// Tạo TTL index để tự động xóa document khi thời gian hiện tại vượt qua expiredAt
-otpSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
+// TTL Index: Tự động xóa bản ghi khi thời gian hiện tại vượt quá expiredAt
+// sessionSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = mongoose.model("OTPs", otpSchema);
+module.exports = mongoose.model("Session", sessionSchema);
