@@ -1,4 +1,4 @@
-//src/models/otp.model.js
+// src/models/verification.model.js
 const mongoose = require("mongoose");
 const { VERIFICATION_TYPES } = require("../constants/verification");
 
@@ -6,11 +6,7 @@ const verificationSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
-            required: true,
-        },
-        deviceId: {
-            type: String,
+            ref: "User",
             required: true,
         },
         verificationType: {
@@ -34,10 +30,11 @@ const verificationSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+        versionKey: false,
     },
 );
 
 // Hỗ trợ tối ưu truy vấn tìm kiếm OTP của user
-otpSchema.index({ userId: 1, otpType: 1 });
+verificationSchema.index({ userId: 1, verificationType: 1 });
 
-module.exports = mongoose.model("OTPs", otpSchema);
+module.exports = mongoose.model("Verification", verificationSchema);

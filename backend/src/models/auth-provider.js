@@ -18,10 +18,12 @@ const authProviderSchema = new Schema(
         providerIdToken: {
             type: String,
             required: true,
+            trim: true,
         },
     },
     {
         timestamps: true,
+        versionKey: false,
     },
 );
 

@@ -1,164 +1,88 @@
-// src/controllers/auth.controller.js
+//src/controllers/auth.controller.js
+const authService = require("../services/auth.service");
+const { success } = require("../utils/response");
 
-const authService = require("../services/authentication.service");
-
-/**
- * 1. Đăng ký tài khoản mới
- */
 async function register(req, res, next) {
     try {
-        const { username, password, confirmPassword, email, phoneNumber, fullName } = req.body;
-
-        const newUser = await authService.register({
-            username,
-            password,
-            confirmPassword,
-            email,
-            phoneNumber,
-            fullName,
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "Đăng ký tài khoản thành công.",
-            data: {
-                id: newUser._id,
-                username: newUser.username,
-            },
-        });
+        const newUser = await authService.register(req.body);
+        return success(res, newUser, "Đăng ký tài khoản thành công", 201);
     } catch (error) {
-        next(error);
+        return next(error);
     }
 }
 
-/**
- * 2. Đăng nhập hệ thống
- */
 async function login(req, res, next) {
     try {
-        const { identity, password } = req.body;
-
-        const deviceId = req.headers["x-device-id"];
-        if (!deviceId) {
-            return res.status(400).json({
-                success: false,
-                message: "Thiếu định danh thiết bị (x-device-id).",
-            });
-        }
-
         const deviceInfo = {
-            deviceId: deviceId,
-            deviceName:
-                req.headers["x-device-name"] ||
-                req.headers["user-agent"] ||
-                "Thiết bị không xác định",
-            ipAddress: req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress,
+            deviceId: req.headers["x-device-id"] || "",
+            ipAddress: req.ip || "",
+            userAgent: req.headers["user-agent"] || "Unknown Device",
         };
 
-        const result = await authService.login({ identity, password }, deviceInfo);
-
-        if (result.requireOTP) {
-            return res.status(200).json({
-                success: true,
-                requireOTP: true,
-                userId: result.userId,
-                message: result.message,
-            });
-        }
-
-        res.cookie("refreshToken", result.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-
-        return res.status(200).json({
-            success: true,
-            requireOTP: false,
-            message: "Đăng nhập thành công.",
-            accessToken: result.accessToken,
-        });
+        const result = await authService.login(req.body, deviceInfo);
+        return success(res, result, "Đăng nhập thành công", 200);
     } catch (error) {
-        next(error);
+        return next(error);
     }
 }
 
-/**
- * 3. Xoay vòng Token
- */
-async function rotateToken(req, res, next) {
-    try {
-        const oldRefreshToken = req.cookies.refreshToken;
-
-        if (!oldRefreshToken) {
-            return res.status(401).json({
-                success: false,
-                message: "Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.",
-            });
-        }
-
-        const deviceId = req.headers["x-device-id"];
-        if (!deviceId) {
-            return res.status(400).json({
-                success: false,
-                message: "Thiếu định danh thiết bị (x-device-id).",
-            });
-        }
-
-        const deviceInfo = {
-            deviceId: deviceId,
-            deviceName:
-                req.headers["x-device-name"] ||
-                req.headers["user-agent"] ||
-                "Thiết bị không xác định",
-            ipAddress: req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress,
-        };
-
-        const result = await authService.rotateToken(oldRefreshToken, deviceInfo);
-
-        res.cookie("refreshToken", result.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-
-        return res.status(200).json({
-            success: true,
-            accessToken: result.accessToken,
-        });
-    } catch (error) {
-        res.clearCookie("refreshToken");
-        next(error);
-    }
-}
-
-/**
- * 4. Đăng xuất
- */
 async function logout(req, res, next) {
     try {
-        const refreshToken = req.cookies.refreshToken;
-
-        if (refreshToken) {
-            await authService.logout(refreshToken);
-        }
-
-        res.clearCookie("refreshToken");
-
-        return res.status(200).json({
-            success: true,
-            message: "Đăng xuất thành công.",
-        });
+        const { refreshToken } = req.body;
+        await authService.logout(refreshToken);
+        return success(res, null, "Đăng xuất thành công", 200);
     } catch (error) {
-        next(error);
+        return next(error);
+    }
+}
+
+async function logoutAll(req, res, next) {
+    try {
+        const userId = req.user.sub;
+        await authService.logoutAll(userId);
+        return success(res, null, "Đăng xuất khỏi tất cả thiết bị thành công", 200);
+    } catch (error) {
+        return next(error);
+    }
+}
+
+async function rotateToken(req, res, next) {
+    try {
+        const { refreshToken } = req.body;
+        const deviceInfo = {
+            deviceId: req.headers["x-device-id"] || "",
+            ipAddress: req.ip || "",
+            userAgent: req.headers["user-agent"] || "Unknown Device",
+        };
+
+        const result = await authService.rotateToken(refreshToken, deviceInfo);
+        return success(res, result, "Làm mới token thành công", 200);
+    } catch (error) {
+        return next(error);
+    }
+}
+
+async function issueNewDeviceId(req, res, next) {
+    try {
+        const { userId } = req.body;
+        const deviceInfo = {
+            deviceId: "",
+            ipAddress: req.ip || "",
+            userAgent: req.headers["user-agent"] || "Unknown Device",
+        };
+
+        const result = await authService.issueNewDeviceId(userId, deviceInfo);
+        return success(res, result, "Cấp thiết bị mới thành công", 200);
+    } catch (error) {
+        return next(error);
     }
 }
 
 module.exports = {
     register,
     login,
-    rotateToken,
     logout,
+    logoutAll,
+    rotateToken,
+    issueNewDeviceId,
 };

@@ -33,13 +33,14 @@ const sessionSchema = new Schema(
     },
     {
         timestamps: true,
+        versionKey: false,
     },
 );
 
 // Index tìm kiếm nhanh danh sách phiên đăng nhập của người dùng
 sessionSchema.index({ userId: 1 });
 
-// TTL Index: Tự động xóa bản ghi khi thời gian hiện tại vượt quá expiredAt
-// sessionSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
+// Index tìm kiếm nhanh token
+sessionSchema.index({ refreshToken: 1 });
 
 module.exports = mongoose.model("Session", sessionSchema);

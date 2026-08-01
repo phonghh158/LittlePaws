@@ -1,15 +1,17 @@
 {
   "name": "LittlePaws-Backend",
   "version": "1.0.0",
-  "description": "Ứng dụng theo dõi trạng thái thú cưng",
+  "description": "Little Paws là trợ lý đắc lực dành cho những người yêu động vật, giúp việc chăm sóc thú cưng trở nên dễ dàng, khoa học và chu đáo hơn. Ứng dụng mang đến một giải pháp toàn diện để bạn theo dõi mọi khía cạnh trong cuộc sống của người bạn bốn chân: từ ghi chép chỉ số sức khỏe, nhắc nhở lịch tiêm phòng, theo dõi lịch trình vệ sinh cá nhân, cho đến quản lý chi tiết kho thức ăn và chi phí mua sắm. Với Little Paws, mọi thông tin quan trọng của thú cưng đều được lưu trữ gọn gàng và an toàn, giúp bạn xóa bỏ nỗi lo quên lịch trình và yên tâm tận hưởng trọn vẹn những khoảnh khắc gắn kết tuyệt vời bên chúng.",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "seed": "nodemon test/index.js"
   },
   "keywords": [
     "littlepaws",
+    "paws",
     "pets",
     "cats",
     "dogs",
@@ -20,18 +22,22 @@
   "type": "commonjs",
   "dependencies": {
     "argon2": "^0.44.0",
+    "axios": "^1.18.1",
     "cors": "^2.8.6",
     "dayjs": "^1.11.21",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-validator": "^7.3.2",
     "helmet": "^8.2.0",
     "http-status-codes": "^2.3.0",
+    "joi": "^18.2.3",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.3",
-    "morgan": "^1.11.0"
+    "mongoose-paginate-v2": "^1.9.5",
+    "morgan": "^1.11.0",
+    "slugify": "^1.6.9"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.5.0",
     "nodemon": "^3.1.14"
   }
 }

@@ -1,4 +1,4 @@
-//src/constants/otp.js
+// src/constants/verification.js
 const VERIFICATION_TYPES = {
     VERIFY_ACCOUNT: "VERIFY_ACCOUNT",
     RESET_PASSWORD: "RESET_PASSWORD",

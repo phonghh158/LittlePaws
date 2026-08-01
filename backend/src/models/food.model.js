@@ -1,57 +1,78 @@
 // src/models/food.model.js
-
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const preventativeCareSchema = new Schema(
+const foodSchema = new Schema(
     {
-        petId: {
+        speciesIds: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Species",
+            },
+        ],
+        ownerId: {
             type: Schema.Types.ObjectId,
-            ref: "Pet",
-            required: true,
+            ref: "User",
+            default: null,
         },
-        type: {
+        brand: {
             type: String,
-            enum: ["vaccine", "deworm", "rabies", "flea_tick"],
             required: true,
+            trim: true,
         },
         name: {
             type: String,
             required: true,
+            trim: true,
         },
-        appointmentDate: {
+        slug: {
+            type: String,
+            unique: true,
+            required: true,
+            trim: true,
+        },
+        category: {
+            type: String,
+            enum: ["dry_food", "wet_food", "treat", "supplement"],
+            required: true,
+        },
+        unit: {
+            type: String,
+            enum: ["bottle", "pack", "piece", "box", "bag", "can"],
+            required: true,
+        },
+        measurementValue: {
+            type: Number,
+            required: true,
+        },
+        measurementUnit: {
+            type: String,
+            enum: ["g", "kg", "ml", "L"],
+            required: true,
+        },
+        description: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        deletedAt: {
             type: Date,
             default: null,
-        },
-        executionDate: {
-            type: Date,
-            default: null,
-        },
-        veterinarian: {
-            type: String,
-            default: "",
-        },
-        clinic: {
-            type: String,
-            default: "",
-        },
-        note: {
-            type: String,
-            default: "",
+            select: false,
         },
     },
     {
         timestamps: true,
+        versionKey: false,
     },
 );
 
-// Index tìm kiếm lịch sử phòng bệnh của một thú cưng cụ thể
-preventativeCareSchema.index({ petId: 1 });
+// Khu vực cấu hình index
+foodSchema.index({ name: "text", brand: "text" });
+foodSchema.index({ slug: 1 });
+foodSchema.index({ category: 1 });
+foodSchema.index({ ownerId: 1 });
+foodSchema.index({ speciesIds: 1 });
+foodSchema.index({ deletedAt: 1 });
 
-// Index lọc theo loại phòng bệnh (ví dụ: chỉ xem lịch sử tẩy giun)
-preventativeCareSchema.index({ petId: 1, type: 1 });
-
-// Index hỗ trợ tìm kiếm các lịch hẹn sắp tới (nhắc lịch tiêm, nhỏ gáy...)
-preventativeCareSchema.index({ appointmentDate: 1 });
-
-module.exports = mongoose.model("PreventativeCare", preventativeCareSchema);
+module.exports = mongoose.model("Food", foodSchema);

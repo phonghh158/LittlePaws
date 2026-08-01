@@ -27,17 +27,20 @@ const preventativeCareSchema = new Schema(
             type: Date,
             default: null,
         },
-        veterinarian: {
-            type: String,
-            default: "",
-        },
         clinic: {
             type: String,
             default: "",
+            trim: true,
+        },
+        veterinarian: {
+            type: String,
+            default: "",
+            trim: true,
         },
         note: {
             type: String,
             default: "",
+            trim: true,
         },
     },
     {
@@ -48,10 +51,10 @@ const preventativeCareSchema = new Schema(
 // Index tìm kiếm lịch sử phòng bệnh của một thú cưng cụ thể
 preventativeCareSchema.index({ petId: 1 });
 
-// Index lọc theo loại phòng bệnh (ví dụ: chỉ xem lịch sử tẩy giun)
+// Index lọc theo loại phòng bệnh
 preventativeCareSchema.index({ petId: 1, type: 1 });
 
-// Index hỗ trợ tìm kiếm các lịch hẹn sắp tới (nhắc lịch tiêm, nhỏ gáy...)
+// Index hỗ trợ tìm kiếm các lịch hẹn sắp tới
 preventativeCareSchema.index({ appointmentDate: 1 });
 
 module.exports = mongoose.model("PreventativeCare", preventativeCareSchema);

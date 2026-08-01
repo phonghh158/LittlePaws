@@ -1,23 +1,34 @@
 // src/models/pet-owner.model.js
-
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const petOwnerSchema = new Schema(
+const petOwnerSchema = new mongoose.Schema(
     {
-        userId: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
+        petId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Pet",
             required: true,
         },
-        petId: {
-            type: Schema.Types.ObjectId,
-            ref: "Pet",
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
             required: true,
         },
         relationship: {
             type: String,
             required: true,
+            default: "co-owner",
+            trim: true,
+        },
+        role: {
+            type: String,
+            enum: ["owner", "co-owner"],
+            default: "co-owner",
+        },
+        deletedAt: {
+            type: Date,
+            default: null,
+            expires: "60d",
         },
     },
     {
@@ -25,11 +36,10 @@ const petOwnerSchema = new Schema(
     },
 );
 
-// Index hỗ trợ tìm kiếm hai chiều từ phía người dùng hoặc từ phía thú cưng
-petOwnerSchema.index({ userId: 1 });
-petOwnerSchema.index({ petId: 1 });
-
-// Compound index đảm bảo một người không bị tạo trùng lặp mối quan hệ với cùng một bé thú cưng
+// Index
 petOwnerSchema.index({ userId: 1, petId: 1 }, { unique: true });
+
+// plugin
+petOwnerSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("PetOwner", petOwnerSchema);

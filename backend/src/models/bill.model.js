@@ -41,6 +41,7 @@ const billSchema = new Schema(
         note: {
             type: String,
             default: "",
+            trim: true,
         },
         items: {
             type: [billItemSchema],
@@ -49,6 +50,8 @@ const billSchema = new Schema(
         deletedAt: {
             type: Date,
             default: null,
+            expires: "45d",
+            select: false,
         },
     },
     {
@@ -61,8 +64,5 @@ billSchema.index({ petId: 1 });
 
 // Index hỗ trợ thống kê chi tiêu theo thời gian
 billSchema.index({ purchaseDate: 1 });
-
-// Index lọc các hóa đơn chưa bị xóa mềm
-billSchema.index({ deletedAt: 1 });
 
 module.exports = mongoose.model("Bill", billSchema);

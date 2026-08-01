@@ -1,32 +1,31 @@
 // src/models/pet.model.js
-
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const petSchema = new Schema(
+const petSchema = new mongoose.Schema(
     {
         name: {
             type: String,
             required: true,
+            default: "Pet",
+            trim: true,
+            minlength: 1,
+            maxlength: 72,
         },
         nickname: {
             type: String,
             default: "",
-        },
-        speciesId: {
-            type: Schema.Types.ObjectId,
-            ref: "Species",
-            required: true,
+            trim: true,
+            maxlength: 96,
         },
         breedId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Breed",
             required: true,
         },
         gender: {
             type: String,
             enum: ["male", "female", "unknown"],
-            required: true,
         },
         dob: {
             type: Date,
@@ -43,6 +42,7 @@ const petSchema = new Schema(
         bloodType: {
             type: String,
             default: "",
+            trim: true,
         },
         isNeutered: {
             type: Boolean,
@@ -50,12 +50,13 @@ const petSchema = new Schema(
         },
         status: {
             type: String,
-            enum: ["alive", "lost", "gone"],
+            enum: ["alive", "lost", "gone", "other"],
             default: "alive",
         },
         deletedAt: {
             type: Date,
             default: null,
+            expires: "60d",
         },
     },
     {
@@ -63,10 +64,13 @@ const petSchema = new Schema(
     },
 );
 
-// Các index hỗ trợ truy vấn và lọc danh sách thú cưng
-petSchema.index({ speciesId: 1 });
+// Khu vực cấu hình index
+petSchema.index({ name: "text" });
 petSchema.index({ breedId: 1 });
 petSchema.index({ status: 1 });
 petSchema.index({ deletedAt: 1 });
+
+// Khu vực gọi plugin
+petSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Pet", petSchema);

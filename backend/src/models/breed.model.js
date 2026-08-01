@@ -1,22 +1,26 @@
-// src/models/breed.model.js
-
+//src/models/breed.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const breedSchema = new Schema(
+const breedSchema = new mongoose.Schema(
     {
         speciesId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Species",
             required: true,
         },
         name: {
             type: String,
             required: true,
+            minlength: 2,
+            maxlength: 72,
+            trim: true,
         },
         description: {
             type: String,
             default: "",
+            maxlength: 2048,
+            trim: true,
         },
         deletedAt: {
             type: Date,
@@ -25,10 +29,17 @@ const breedSchema = new Schema(
     },
     {
         timestamps: true,
+        versionKey: false,
     },
 );
 
-// Index giúp tìm nhanh các giống thuộc một loài và chưa bị xóa
-breedSchema.index({ speciesId: 1, deletedAt: 1 });
+// Khu vực cấu hình index
+breedSchema.index({ name: "text" });
+breedSchema.index({ speciesId: 1 });
+breedSchema.index({ deletedAt: 1 });
+breedSchema.index({ speciesId: 1, name: 1 }, { unique: true });
+
+// Khu vực gọi plugin phân trang
+breedSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Breed", breedSchema);

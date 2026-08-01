@@ -89,8 +89,6 @@ function generateSecretKey() {
 }
 
 module.exports = {
-    hashPassword,
-    verifyPassword,
     hashSHA512,
     verifySHA512,
     encodeBase64,

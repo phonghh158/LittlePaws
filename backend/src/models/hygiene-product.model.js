@@ -1,3 +1,4 @@
+// src/models/hygiene-product.model.js
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
@@ -17,10 +18,18 @@ const hygieneProductSchema = new Schema(
         brand: {
             type: String,
             required: true,
+            trim: true,
         },
         name: {
             type: String,
             required: true,
+            trim: true,
+        },
+        slug: {
+            type: String,
+            unique: true,
+            required: true,
+            trim: true,
         },
         category: {
             type: String,
@@ -44,20 +53,26 @@ const hygieneProductSchema = new Schema(
         description: {
             type: String,
             default: "",
+            trim: true,
         },
         deletedAt: {
             type: Date,
             default: null,
+            select: false,
         },
     },
     {
         timestamps: true,
+        versionKey: false,
     },
 );
 
+// Khu vực cấu hình index
 hygieneProductSchema.index({ speciesIds: 1 });
-hygieneProductSchema.index({ ownerId: 1 });
+hygieneProductSchema.index({ slug: 1 });
+hygieneProductSchema.index({ name: "text", brand: "text" });
 hygieneProductSchema.index({ category: 1 });
+hygieneProductSchema.index({ ownerId: 1 });
 hygieneProductSchema.index({ deletedAt: 1 });
 
 module.exports = mongoose.model("HygieneProduct", hygieneProductSchema);

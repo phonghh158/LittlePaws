@@ -1,13 +1,13 @@
-// src/utils/otp.js
+// src/utils/verification.js
 const dayjs = require("dayjs");
 const { hashSHA512, verifySHA512, generateRandomString } = require("./crypto");
 
 /**
  * Tạo OTP code ngẫu nhiên (bao gồm cả số 0 đứng đầu)
- * @param {*} length - Độ dài của OTP code
+ * @param { Number } length - Độ dài của OTP code
  * @returns Mã OTP
  */
-function generateOtpCode(length = process.env.OTP_LENGTH) {
+function generateOtpCode(length = parseInt(process.env.OTP_LENGTH)) {
     let otpCode = "";
 
     for (let i = 0; i < length; i++) {
@@ -18,36 +18,33 @@ function generateOtpCode(length = process.env.OTP_LENGTH) {
 }
 
 /**
- * Tính thời gian hết hạn của OTP
- * @param { Number } time - Thời gian hết hạn OTP (tính bằng phút)
- * @returns Thời gian hết hạn
- */
-function getExpiresAt(time = 15) {
-    const exp = process.env.OTP_EXPIRES.toString();
-    const expiredAt = dayjs().add(time, "m").toDate();
-
-    return expiredAt;
-}
-
-/**
- * Tạo stateless OTP code và token gắn link
+ * Tạo Verification Token ngẫu nhiên
  * @param {string} userId - ID người dùng
- * @param {string} deviceId - ID thiết bị
- * @param {string} otpType - Loại OTP code
- * @returns Stateless OTP code và token
+ * @param {string} verificationType - Loại Verification
+ * @returns Random Token Hash
  */
-function generateToken(userId, deviceId, otpType) {
+function generateToken(userId, verificationType) {
     const randomString = generateRandomString(8);
-    const otpCode = generateOtpCode();
-    const expiresAt = getExpiresAt();
 
-    const tokenPlain = `${userId}.${deviceId}.${randomString}.${otpType}.${otpCode}.${expiresAt}`;
+    const tokenPlain = `${userId}-${randomString}.${verificationType}`;
     const tokenHash = hashSHA512(tokenPlain, process.env.SHA512_SALT);
 
     return tokenHash;
 }
 
+/**
+ * Tính thời gian hết hạn của OTP
+ * @param { Number } exp - Thời gian hết hạn OTP (tính bằng phút)
+ * @returns Thời gian hết hạn
+ */
+function getExpiredAt(exp = parseInt(process.env.VERIFICATION_EXPIRES)) {
+    const expiredAt = dayjs().add(exp, "m").toDate();
+
+    return expiredAt;
+}
+
 module.exports = {
     generateOtpCode,
-    getExpiresAt,
+    generateToken,
+    getExpiredAt,
 };

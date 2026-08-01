@@ -1,36 +1,42 @@
 // src/services/auth.service.js
 const dayjs = require("dayjs");
+const argon2 = require("argon2");
+const { randomUUID } = require("crypto");
 
 const User = require("../models/user.model");
 const Session = require("../models/session.model");
-const OTP = require("../models/otp.model");
 
-const { hashPassword, verifyPassword, hashSHA512 } = require("../utils/crypto");
+const { VERIFICATION_TYPES } = require("../constants/verification");
+const { USER_AVATAR } = require("../constants/default-avatar");
+
+const { hashSHA512 } = require("../utils/crypto");
 const {
     generateAccessToken,
     generateRefreshToken,
     verifyRefreshToken,
 } = require("../utils/jwt");
-const { generateOtpCode, otpExpiresAt } = require("../utils/otp");
 
-const { VERIFICATION_TYPES } = require("../constants/verification");
+const { createOTPAndToken } = require("./verification.service");
 
 /**
  * Đăng ký tài khoản mới
  */
 async function register(data) {
-    const { username, password, confirmPassword, email, phoneNumber, fullName } = data;
+    const { password, confirmPassword, phoneNumber, fullName, gender, avatarUrl, role } = data;
+    let { username, email } = data;
 
     if (password !== confirmPassword) {
         throw new Error("Mật khẩu nhập lại không khớp.");
     }
 
+    username = username.toLowerCase();
     const isUsernameExist = await User.exists({ username, deletedAt: null });
     if (isUsernameExist) {
         throw new Error("Tên đăng nhập đã tồn tại.");
     }
 
     if (email) {
+        email = email.toLowerCase();
         const isEmailExist = await User.exists({ email, deletedAt: null });
         if (isEmailExist) {
             throw new Error("Email này đã được sử dụng.");
@@ -44,7 +50,17 @@ async function register(data) {
         }
     }
 
-    const hashedPassword = await hashPassword(password);
+    if (avatarUrl === "") {
+        if (gender === "MALE") {
+            avatarUrl = USER_AVATAR.MALE;
+        } else if (gender === "FEMALE") {
+            avatarUrl = USER_AVATAR.FEMALE;
+        } else {
+            avatarUrl = USER_AVATAR.UNKNOWN;
+        }
+    }
+
+    const hashedPassword = await argon2.hash(password);
 
     const newUser = await User.create({
         username,
@@ -54,7 +70,16 @@ async function register(data) {
         fullName,
     });
 
-    return newUser;
+    const user = {
+        _id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        fullName: newUser.fullName,
+        role: newUser.role,
+    };
+
+    return user;
 }
 
 /**
@@ -62,41 +87,48 @@ async function register(data) {
  */
 async function login(data, deviceInfo) {
     const { identity, password } = data;
-    const { deviceId } = deviceInfo;
 
     const user = await User.findOne({
         $or: [{ username: identity }, { email: identity }, { phoneNumber: identity }],
         deletedAt: null,
-    });
+    })
+        .select("+password")
+        .lean();
 
     if (!user) {
-        throw new Error("Tài khoản hoặc mật khẩu không chính xác.");
+        throw new Error("Tài khoản không tồn tại.");
     }
 
-    if (user.status === "BANNED") {
+    if (user.bannedAt) {
         throw new Error("Tài khoản của bạn đã bị khóa.");
     }
 
-    const isPasswordValid = await verifyPassword(user.password, password);
+    const isPasswordValid = await argon2.verify(user.password, password);
     if (!isPasswordValid) {
         throw new Error("Tài khoản hoặc mật khẩu không chính xác.");
     }
 
-    const isKnownDevice = await Session.exists({
-        userId: user._id,
-        deviceId: deviceId,
-    });
-
-    if (!isKnownDevice) {
+    if (!deviceInfo.deviceId) {
         // Code gửi email OTP, SMS OTP, v.v.
+        // MOCK OTP And Token
+        const verificationService = require("./verification.service");
+        const verificationData = await verificationService.createOTPAndToken(
+            user._id,
+            VERIFICATION_TYPES.VERIFY_DEVICE,
+        );
+
+        console.log("📱 Thiết bị mới đăng nhập:");
+        console.log("🔢 Mock OTP:", verificationData.otpCode);
+        console.log("🔑 Mock Token:", verificationData.token);
+
         return {
-            requireOTP: true,
+            requireVerification: true,
             userId: user._id,
-            message: "Thiết bị mới đăng nhập lần đầu. Vui lòng xác thực OTP.",
+            message: "Thiết bị mới đăng nhập lần đầu. Vui lòng xác thực thiết bị.",
         };
     }
 
-    return await issueNewSession(user._id, user.role, deviceInfo);
+    return await issueNewSession(user._id, deviceInfo);
 }
 
 /**
@@ -117,19 +149,9 @@ async function logoutAll(userId) {
 }
 
 /**
- * Refresh Token Rotation (Tích hợp Grace Period 30s & đối chiếu Device ID)
+ * Refresh Token Rotation
  */
 async function rotateToken(refreshToken, deviceInfo) {
-    // Kiểm tra session
-    let refreshTokenHash = hashSHA512(refreshToken, process.env.SHA512_SALT);
-    let currentSession = await Session.findOne({
-        refreshToken: refreshTokenHash,
-    });
-
-    if (!currentSession) {
-        throw new Error("Refresh token không tồn tại trong Session.");
-    }
-
     // Xác thực Refresh Token, lấy payload
     let payload = verifyRefreshToken(refreshToken);
 
@@ -137,16 +159,26 @@ async function rotateToken(refreshToken, deviceInfo) {
         throw new Error("Refresh Token không hợp lệ.");
     }
 
-    // Kiểm tra thiết bị gửi yêu cầu có phải thiết bị nắm Refresh Token hay không?
-    if (currentSession.deviceId !== deviceInfo.deviceId) {
-        await Session.deleteMany({ userId: payload.userId });
-        throw new Error("Phát hiện rủi ro bảo mật. Refresh Token được gửi từ thiết bị lạ!");
+    // Kiểm tra session
+    let refreshTokenHash = hashSHA512(refreshToken, process.env.SHA512_SALT);
+    let currentSession = await Session.findOne({
+        refreshToken: refreshTokenHash,
+    });
+
+    if (!currentSession || currentSession.deviceId !== deviceInfo.deviceId) {
+        await Session.deleteMany({ userId: payload.sub });
+        throw new Error("Phát hiện rủi ro bảo mật. Refresh Token không hợp lệ.");
+    }
+
+    if (currentSession.expiredAt < dayjs().toDate()) {
+        await Session.deleteMany({ userId: payload.sub });
+        throw new Error("Phát hiện rủi ro bảo mật. Refresh Token đã hết hạn.");
     }
 
     await Session.deleteOne({ refreshToken: refreshTokenHash });
 
     // Cấp phát cặp Token mới
-    return await issueNewSession(payload.userId, deviceInfo);
+    return await issueNewSession(payload.sub, deviceInfo);
 }
 
 /**
@@ -156,14 +188,11 @@ async function issueNewSession(userId, deviceInfo) {
     // Đoạn này sẽ được thay thế bởi function getUser
     const user = await User.findById(userId);
 
-    if (!user) {
+    if (!user || user.status === "BANNED" || user.deletedAt) {
         throw new Error("Tài khoản không tồn tại.");
     }
 
     const { deviceId, ipAddress, userAgent } = deviceInfo;
-
-    const refreshTokenExp = process.env.JWT_REFRESH_EXPIRES.toString();
-    const accessTokenExp = process.env.JWT_ACCESS_EXPIRES.toString();
 
     /**
      * Payload
@@ -177,17 +206,11 @@ async function issueNewSession(userId, deviceInfo) {
         sub: user._id,
         role: user.role,
         device_id: deviceId,
-        exp: dayjs()
-            .add(parseInt(accessTokenExp), accessTokenExp[accessTokenExp.length - 1])
-            .unix(),
     };
 
     const payloadRT = {
         sub: user._id,
         device_id: deviceId,
-        exp: dayjs()
-            .add(parseInt(refreshTokenExp), refreshTokenExp[refreshTokenExp.length - 1])
-            .unix(),
     };
 
     const accessToken = generateAccessToken(payloadAT);
@@ -195,6 +218,7 @@ async function issueNewSession(userId, deviceInfo) {
 
     const refreshTokenHash = hashSHA512(refreshToken, process.env.SHA512_SALT);
 
+    const refreshTokenExp = process.env.JWT_REFRESH_EXPIRES_IN.toString();
     const refreshTokenExpiredAt = dayjs()
         .add(parseInt(refreshTokenExp), refreshTokenExp[refreshTokenExp.length - 1])
         .toDate();
@@ -212,7 +236,13 @@ async function issueNewSession(userId, deviceInfo) {
         user: {
             _id: user._id,
             username: user.username,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            fullName: user.fullName,
+            gender: user.gender,
+            avatarUrl: user.avatarUrl,
             role: user.role,
+            status: user.status,
         },
         token: {
             accessToken: accessToken,
@@ -222,10 +252,22 @@ async function issueNewSession(userId, deviceInfo) {
     };
 }
 
+/**
+ * Issue new DeviceId for User
+ */
+async function issueNewDeviceId(userId, deviceInfo) {
+    const deviceId = randomUUID();
+
+    deviceInfo.deviceId = deviceId;
+
+    return await issueNewSession(userId, deviceInfo);
+}
+
 module.exports = {
     register,
     login,
     logout,
     logoutAll,
     rotateToken,
+    issueNewDeviceId,
 };

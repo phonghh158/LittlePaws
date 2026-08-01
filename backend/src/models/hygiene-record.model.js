@@ -31,6 +31,7 @@ const hygieneRecordSchema = new Schema(
         note: {
             type: String,
             default: "",
+            trim: true,
         },
     },
     {

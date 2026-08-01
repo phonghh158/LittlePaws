@@ -1,5 +1,4 @@
 // src/models/body-metric.model.js
-
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
@@ -17,10 +16,6 @@ const bodyMetricSchema = new Schema(
         recordedAt: {
             type: Date,
             required: true,
-        },
-        note: {
-            type: String,
-            default: "",
         },
     },
     {
