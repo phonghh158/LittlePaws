@@ -5,7 +5,7 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 const bodyMetricSchema = new mongoose.Schema(
     {
         petId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Pet",
             required: true,
         },

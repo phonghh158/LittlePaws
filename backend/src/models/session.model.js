@@ -1,11 +1,11 @@
 // src/models/session.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const sessionSchema = new Schema(
+const sessionSchema = new mongoose.Schema(
     {
         userId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
         },
@@ -42,5 +42,8 @@ sessionSchema.index({ userId: 1 });
 
 // Index tìm kiếm nhanh token
 sessionSchema.index({ refreshToken: 1 });
+
+// Khu vực gọi plugin
+sessionSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Session", sessionSchema);

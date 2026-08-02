@@ -5,6 +5,8 @@ const Pet = require("../models/pet.model");
 const PetOwner = require("../models/pet-owner.model");
 const PetOwnerInvitation = require("../models/pet-owner-invitation.model");
 
+const PetOwnerHelper = require("../services/helper/pet-owner.helper");
+
 /**
  * CREATE
  * Gửi lời mời trở thành đồng sở hữu của thú cưng
@@ -13,25 +15,7 @@ const PetOwnerInvitation = require("../models/pet-owner-invitation.model");
  * @param { String } inviteeId - ID người được mời
  */
 async function invitePetOwner(petId, inviterId, inviteeId) {
-    const petOwnerRecord = await PetOwner.findOne({
-        petId: petId,
-        userId: inviterId,
-        deletedAt: null,
-    }).select("role");
-
-    if (!petOwnerRecord) {
-        const error = new Error("Không tìm thấy bản ghi thú cưng.");
-        error.status = 404;
-        throw error;
-    }
-
-    if (petOwnerRecord.role !== "owner") {
-        const error = new Error(
-            "Không có quyền thao tác mời người khác trở thành đồng sở hữu.",
-        );
-        error.status = 403;
-        throw error;
-    }
+    await PetOwnerHelper.isPetOwner(petId, inviterId);
 
     const inviteeIsPetOwner = await PetOwner.exists({
         petId: petId,
@@ -222,23 +206,7 @@ async function updatePetOwnerRelationship(petId, ownerId, relationship) {
  * @param { String } role - Role
  */
 async function updatePetOwnerRole(petId, ownerId, coOwnerId, role) {
-    const petOwnerRecord = await PetOwner.findOne({
-        petId: petId,
-        userId: ownerId,
-        deletedAt: null,
-    });
-
-    if (!petOwnerRecord) {
-        const error = new Error("Không tìm thấy bản ghi thú cưng.");
-        error.status = 404;
-        throw error;
-    }
-
-    if (petOwnerRecord.role !== "owner") {
-        const error = new Error("Không có quyền thay đổi role của người khác.");
-        error.status = 403;
-        throw error;
-    }
+    await isPetOwner(petId, ownerId);
 
     const petCoOwnerRecord = await PetOwner.findOne({
         petId: petId,

@@ -1,11 +1,11 @@
 // src/models/illness-record.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const illnessRecordSchema = new Schema(
+const illnessRecordSchema = new mongoose.Schema(
     {
         petId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Pet",
             required: true,
         },
@@ -57,5 +57,8 @@ illnessRecordSchema.index({ petId: 1 });
 illnessRecordSchema.index({ diseaseName: "text" });
 illnessRecordSchema.index({ startDate: 1 });
 illnessRecordSchema.index({ endDate: 1 });
+
+// Khu vực gọi plugin
+illnessRecordSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("IllnessRecord", illnessRecordSchema);
