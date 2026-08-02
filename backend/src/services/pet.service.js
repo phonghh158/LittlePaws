@@ -6,6 +6,8 @@ const User = require("../models/user.model");
 const Pet = require("../models/pet.model");
 const PetOwner = require("../models/pet-owner.model");
 
+const PetOwnerHelper = require("../services/helper/pet-owner.helper");
+
 const { PET_AVATAR } = require("../constants/default-avatar");
 
 /**
@@ -142,10 +144,7 @@ async function getAllPets(ownerId, query) {
  * @returns Thông tin thú cưng
  */
 async function getPetById(petId, ownerId) {
-    const isOwner = await PetOwner.exists({ petId: petId, userId: ownerId });
-    if (!isOwner) {
-        throw new Error("Không tìm thấy bạn nhỏ này trong danh sách thú cưng.");
-    }
+    await PetOwnerHelper.isPetOwnership(petId, ownerId);
 
     const pet = await Pet.findOne({
         _id: petId,
@@ -190,22 +189,7 @@ async function getPetById(petId, ownerId) {
  * @returns Thông tin bản ghi thú cưng sau khi cập nhật
  */
 async function updatePet(ownerId, petId, updateData) {
-    const petOwnerRecord = await PetOwner.findOne({
-        petId: petId,
-        userId: ownerId,
-        deletedAt: null,
-    });
-    if (!petOwnerRecord) {
-        const error = new Error("Không tìm thấy bạn nhỏ này trong danh sách thú cưng.");
-        error.status = 404;
-        throw error;
-    }
-
-    if (petOwnerRecord.role !== "owner") {
-        const error = new Error("Không có quyền thay đổi thông tin thú cưng.");
-        error.status = 403;
-        throw error;
-    }
+    await PetOwnerHelper.isPetOwner(petId, ownerId);
 
     const updatedPet = await Pet.findOneAndUpdate({ _id: petId, deletedAt: null }, updateData, {
         new: true,
@@ -249,22 +233,7 @@ async function updatePet(ownerId, petId, updateData) {
  * @returns Thông tin thú cưng sau khi cập nhật
  */
 async function updatePetBreed(petId, ownerId, breedId) {
-    const petOwnerRecord = await PetOwner.findOne({
-        petId: petId,
-        userId: ownerId,
-        deletedAt: null,
-    });
-    if (!petOwnerRecord) {
-        const error = new Error("Không tìm thấy bạn nhỏ này trong danh sách thú cưng.");
-        error.status = 404;
-        throw error;
-    }
-
-    if (petOwnerRecord.role !== "owner") {
-        const error = new Error("Không có quyền thay đổi thông tin thú cưng.");
-        error.status = 403;
-        throw error;
-    }
+    await PetOwnerHelper.isPetOwner(petId, ownerId);
 
     const updatedPet = await Pet.findOneAndUpdate(
         { _id: petId, deletedAt: null },
@@ -303,22 +272,7 @@ async function updatePetBreed(petId, ownerId, breedId) {
  * @returns Thông tin thú cưng sau khi cập nhật
  */
 async function updatePetStatus(petId, ownerId, newStatus) {
-    const petOwnerRecord = await PetOwner.findOne({
-        petId: petId,
-        userId: ownerId,
-        deletedAt: null,
-    });
-    if (!petOwnerRecord) {
-        const error = new Error("Không tìm thấy bạn nhỏ này trong danh sách thú cưng.");
-        error.status = 404;
-        throw error;
-    }
-
-    if (petOwnerRecord.role !== "owner") {
-        const error = new Error("Không có quyền thay đổi thông tin thú cưng.");
-        error.status = 403;
-        throw error;
-    }
+    await PetOwnerHelper.isPetOwner(petId, ownerId);
 
     const updatedPet = await Pet.findOneAndUpdate(
         { _id: petId, deletedAt: null },
@@ -350,23 +304,7 @@ async function updatePetStatus(petId, ownerId, newStatus) {
  * @returns Thông tin bản ghi thú cưng sau khi xóa
  */
 async function deletePet(ownerId, petId, reason) {
-    const petOwnerRecord = await PetOwner.findOne({
-        petId: petId,
-        userId: ownerId,
-        deletedAt: null,
-    });
-
-    if (!petOwnerRecord) {
-        const error = new Error("Không tìm thấy bạn nhỏ này trong danh sách thú cưng.");
-        error.status = 404;
-        throw error;
-    }
-
-    if (petOwnerRecord.role !== "owner") {
-        const error = new Error("Không có quyền thay đổi thông tin thú cưng.");
-        error.status = 403;
-        throw error;
-    }
+    await PetOwnerHelper.isPetOwner(petId, ownerId);
 
     const deletedPet = await Pet.findOneAndUpdate(
         { _id: petId, deletedAt: null },
@@ -411,25 +349,7 @@ async function deletePet(ownerId, petId, reason) {
  * @returns Thông tin thú cưng sau khi khôi phục
  */
 async function restorePet(petId, ownerId) {
-    const petOwnerRecord = await PetOwner.findOne({
-        petId: petId,
-        userId: ownerId,
-        deletedAt: { $ne: null },
-    });
-
-    if (!petOwnerRecord) {
-        const error = new Error(
-            "Không tìm thấy dữ liệu quyền sở hữu của bạn với thú cưng này.",
-        );
-        error.status = 404;
-        throw error;
-    }
-
-    if (petOwnerRecord.role !== "owner") {
-        const error = new Error("Không có quyền thay đổi thông tin thú cưng.");
-        error.status = 403;
-        throw error;
-    }
+    await PetOwnerHelper.isPetOwner(petId, ownerId);s
 
     const restoredPet = await Pet.findOneAndUpdate(
         { _id: petId, deletedAt: { $ne: null } },

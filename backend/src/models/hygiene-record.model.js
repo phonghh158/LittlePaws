@@ -1,10 +1,11 @@
+// src/models/hygiene-record.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const hygieneRecordSchema = new Schema(
+const hygieneRecordSchema = new mongoose.Schema(
     {
         petId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Pet",
             required: true,
         },
@@ -19,7 +20,7 @@ const hygieneRecordSchema = new Schema(
         },
         productsUsed: [
             {
-                type: Schema.Types.ObjectId,
+                type: mongoose.Schema.Types.ObjectId,
                 ref: "HygieneProduct",
                 default: [],
             },
@@ -39,16 +40,13 @@ const hygieneRecordSchema = new Schema(
     },
 );
 
-// Index tìm kiếm toàn bộ lịch sử vệ sinh của một thú cưng
+// Index tìm kiếm nhanh
 hygieneRecordSchema.index({ petId: 1 });
-
-// Index lọc theo loại hình vệ sinh (ví dụ: chỉ xem lịch sử cắt móng)
 hygieneRecordSchema.index({ type: 1 });
-
-// Index hỗ trợ sắp xếp và lọc theo ngày thực hiện (mới nhất xếp trước)
 hygieneRecordSchema.index({ executionDate: -1 });
-
-// Index hỗn hợp để truy vấn nhanh một loại vệ sinh của một bé cụ thể
 hygieneRecordSchema.index({ petId: 1, type: 1 });
+
+// Khu vực gọi plugin
+hygieneRecordSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("HygieneRecord", hygieneRecordSchema);

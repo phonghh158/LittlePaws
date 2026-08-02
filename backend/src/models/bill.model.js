@@ -1,13 +1,11 @@
 // src/models/bill.model.js
-
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
 
 // Định nghĩa sub-schema cho các mặt hàng trong hóa đơn
-const billItemSchema = new Schema(
+const billItemSchema = new mongoose.Schema(
     {
         itemRefId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             required: true,
         },
         quantity: {
@@ -23,10 +21,10 @@ const billItemSchema = new Schema(
 ); // Tắt tự tạo _id cho từng item con để dữ liệu nhẹ hơn
 
 // Định nghĩa schema chính cho hóa đơn
-const billSchema = new Schema(
+const billSchema = new mongoose.Schema(
     {
         petId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Pet",
             required: true,
         },
@@ -64,5 +62,8 @@ billSchema.index({ petId: 1 });
 
 // Index hỗ trợ thống kê chi tiêu theo thời gian
 billSchema.index({ purchaseDate: 1 });
+
+// Khu vực gọi plugin
+billSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Bill", billSchema);

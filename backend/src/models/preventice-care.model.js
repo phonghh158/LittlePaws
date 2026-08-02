@@ -1,12 +1,10 @@
 // src/models/preventice-care.model.js
-
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
 
-const preventativeCareSchema = new Schema(
+const preventativeCareSchema = new mongoose.Schema(
     {
         petId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Pet",
             required: true,
         },

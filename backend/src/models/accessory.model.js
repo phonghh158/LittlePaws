@@ -1,17 +1,17 @@
 // src/models/accessory.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const accessorySchema = new Schema(
+const accessorySchema = new mongoose.Schema(
     {
         speciesIds: [
             {
-                type: Schema.Types.ObjectId,
+                type: mongoose.Schema.Types.ObjectId,
                 ref: "Species",
             },
         ],
         ownerId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: null,
         },
@@ -60,5 +60,8 @@ accessorySchema.index({ slug: 1 });
 accessorySchema.index({ ownerId: 1 });
 accessorySchema.index({ speciesIds: 1 });
 accessorySchema.index({ deletedAt: 1 });
+
+// Khu vực gọi plugin
+accessorySchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Accessory", accessorySchema);

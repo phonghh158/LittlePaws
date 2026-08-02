@@ -1,17 +1,17 @@
 // src/models/food.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const foodSchema = new Schema(
+const foodSchema = new mongoose.Schema(
     {
         speciesIds: [
             {
-                type: Schema.Types.ObjectId,
+                type: mongoose.Schema.Types.ObjectId,
                 ref: "Species",
             },
         ],
         ownerId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: null,
         },
@@ -74,5 +74,8 @@ foodSchema.index({ category: 1 });
 foodSchema.index({ ownerId: 1 });
 foodSchema.index({ speciesIds: 1 });
 foodSchema.index({ deletedAt: 1 });
+
+// Khu vực gọi plugin
+foodSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Food", foodSchema);
