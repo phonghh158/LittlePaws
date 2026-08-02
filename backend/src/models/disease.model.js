@@ -1,16 +1,16 @@
 // src/models/disease.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const diseaseSchema = new Schema(
+const diseaseSchema = new mongoose.Schema(
     {
         ownerId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: null,
         },
         speciesId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Species",
         },
         name: {
@@ -60,5 +60,8 @@ diseaseSchema.index({ name: "text" });
 diseaseSchema.index({ ownerId: 1 });
 diseaseSchema.index({ isContagious: 1 });
 diseaseSchema.index({ deletedAt: 1 });
+
+// Khu vực gọi plugin
+diseaseSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Disease", diseaseSchema);

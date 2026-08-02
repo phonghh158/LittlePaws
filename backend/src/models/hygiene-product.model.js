@@ -1,17 +1,17 @@
 // src/models/hygiene-product.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const hygieneProductSchema = new Schema(
+const hygieneProductSchema = new mongoose.Schema(
     {
         speciesIds: [
             {
-                type: Schema.Types.ObjectId,
+                type: mongoose.Schema.Types.ObjectId,
                 ref: "Species",
             },
         ],
         ownerId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: null,
         },
@@ -74,5 +74,8 @@ hygieneProductSchema.index({ name: "text", brand: "text" });
 hygieneProductSchema.index({ category: 1 });
 hygieneProductSchema.index({ ownerId: 1 });
 hygieneProductSchema.index({ deletedAt: 1 });
+
+// Khu vực gọi plugin
+hygieneProductSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("HygieneProduct", hygieneProductSchema);

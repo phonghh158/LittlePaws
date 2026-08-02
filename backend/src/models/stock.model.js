@@ -1,16 +1,16 @@
 // src/models/stock.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const stockSchema = new Schema(
+const stockSchema = new mongoose.Schema(
     {
         petId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Pet",
             required: true,
         },
         itemRefId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             required: true,
         },
         stockType: {
@@ -36,5 +36,8 @@ stockSchema.index({ petId: 1, stockType: 1 });
 
 // Index hỗ trợ truy vấn ngược từ sản phẩm
 stockSchema.index({ itemRefId: 1 });
+
+// Khu vực gọi plugin
+stockSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Stock", stockSchema);

@@ -1,12 +1,11 @@
 // src/models/auth-provider.js
-
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
 const authProviderSchema = new Schema(
     {
         userId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
         },
@@ -32,5 +31,8 @@ authProviderSchema.index({ userId: 1 });
 
 // Compound Index đảm bảo một token định danh của một nhà cung cấp là duy nhất
 authProviderSchema.index({ provider: 1, providerIdToken: 1 }, { unique: true });
+
+// Khu vực gọi plugin
+authProviderSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("AuthProvider", authProviderSchema);
