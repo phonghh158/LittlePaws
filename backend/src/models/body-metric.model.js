@@ -1,8 +1,8 @@
 // src/models/body-metric.model.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-const bodyMetricSchema = new Schema(
+const bodyMetricSchema = new mongoose.Schema(
     {
         petId: {
             type: Schema.Types.ObjectId,
@@ -28,5 +28,8 @@ bodyMetricSchema.index({ petId: 1 });
 
 // Index hỗ trợ truy vấn lịch sử cân nặng theo thời gian (mới nhất xếp trước)
 bodyMetricSchema.index({ petId: 1, recordedAt: -1 });
+
+// Khu vực plugin
+bodyMetricSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("BodyMetric", bodyMetricSchema);
