@@ -17,7 +17,7 @@ function authenticate(req, res, next) {
 
         next();
     } catch (error) {
-        return next(err);
+        return next(error);
     }
 }
 
@@ -28,7 +28,7 @@ function authorize(...roles) {
         }
 
         if (!roles.includes(req.user.role)) {
-            return error(res, "Bạn không có quyền thực hiện hành động này", 403);
+            return error(res, "Không có quyền thực hiện hành động này", 403);
         }
 
         next();
