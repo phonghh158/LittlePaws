@@ -2,11 +2,13 @@
 const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
+const SPECIES = require("../constants/pet-species");
+
 const breedSchema = new mongoose.Schema(
     {
-        speciesId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Species",
+        species: {
+            type: String,
+            enum: Object.values(SPECIES),
             required: true,
         },
         name: {
@@ -35,9 +37,8 @@ const breedSchema = new mongoose.Schema(
 
 // Khu vực cấu hình index
 breedSchema.index({ name: "text" });
-breedSchema.index({ speciesId: 1 });
 breedSchema.index({ deletedAt: 1 });
-breedSchema.index({ speciesId: 1, name: 1 }, { unique: true });
+breedSchema.index({ species: 1, name: 1 }, { unique: true });
 
 // Khu vực gọi plugin phân trang
 breedSchema.plugin(mongoosePaginate);

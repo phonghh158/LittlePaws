@@ -29,6 +29,7 @@ const petSchema = new mongoose.Schema(
         },
         dob: {
             type: Date,
+            required: true,
             default: null,
         },
         adoptionDate: {
@@ -41,7 +42,7 @@ const petSchema = new mongoose.Schema(
         },
         bloodType: {
             type: String,
-            default: "",
+            default: "Whole blood",
             trim: true,
         },
         isNeutered: {

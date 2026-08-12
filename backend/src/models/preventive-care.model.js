@@ -1,5 +1,6 @@
-// src/models/preventice-care.model.js
+// src/models/preventive-care.model.js
 const mongoose = require("mongoose");
+const mongoosePaginate = require("mongoose-paginate-v2");
 
 const preventativeCareSchema = new mongoose.Schema(
     {
@@ -16,12 +17,14 @@ const preventativeCareSchema = new mongoose.Schema(
         name: {
             type: String,
             required: true,
-        },
-        appointmentDate: {
-            type: Date,
-            default: null,
+            trim: true,
         },
         executionDate: {
+            type: Date,
+            default: null,
+            required: true,
+        },
+        appointmentDate: {
             type: Date,
             default: null,
         },
@@ -54,5 +57,8 @@ preventativeCareSchema.index({ petId: 1, type: 1 });
 
 // Index hỗ trợ tìm kiếm các lịch hẹn sắp tới
 preventativeCareSchema.index({ appointmentDate: 1 });
+
+// Khu vực gọi plugin
+preventativeCareSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("PreventativeCare", preventativeCareSchema);

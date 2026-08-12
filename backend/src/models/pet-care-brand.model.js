@@ -1,26 +1,29 @@
-// src/models/species.model.js
+// src/models/pet-care-brand.model.js
 const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
-const speciesSchema = new mongoose.Schema(
+const petCareBrandSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            unique: true,
             required: true,
-            minlength: 2,
-            maxlength: 32,
+            unique: true,
             trim: true,
         },
         description: {
             type: String,
             default: "",
-            maxlength: 2048,
+            trim: true,
+        },
+        logoUrl: {
+            type: String,
+            default: "",
             trim: true,
         },
         deletedAt: {
             type: Date,
             default: null,
+            select: false,
         },
     },
     {
@@ -30,9 +33,10 @@ const speciesSchema = new mongoose.Schema(
 );
 
 // Khu vực cấu hình index
-speciesSchema.index({ deletedAt: 1 });
+petCareBrandSchema.index({ name: 1 });
+petCareBrandSchema.index({ deletedAt: 1 });
 
-// Khu vực gọi phân trang
-speciesSchema.plugin(mongoosePaginate);
+// Khu vực gọi plugin
+petCareBrandSchema.plugin(mongoosePaginate);
 
-module.exports = mongoose.model("Species", speciesSchema);
+module.exports = mongoose.model("PetCareBrand", petCareBrandSchema);

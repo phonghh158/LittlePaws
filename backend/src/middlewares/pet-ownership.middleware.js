@@ -1,5 +1,5 @@
-// src/pet-owner.middleware.js
-const PetOwner = require("../models/pet-owner.model");
+// src/pet-ownership.middleware.js
+const PetOwnership = require("../models/pet-ownership.model");
 const { error } = require("../utils/response");
 
 async function authenticatePetOwner(req, res, next) {
@@ -9,15 +9,17 @@ async function authenticatePetOwner(req, res, next) {
 
         if (!petId) return error(res, "Không tìm thấy bản ghi thú cưng.", 404);
 
-        const petOwnerRecord = await PetOwner.findOne({
+        const petOwnershipRecord = await PetOwnership.findOne({
             petId: petId,
             userId: userId,
             deletedAt: null,
         }).lean();
 
-        if (!petOwnerRecord) {
+        if (!petOwnershipRecord) {
             return error(res, "Không tìm thấy bản ghi chủ sở hữu thú cưng.", 404);
         }
+
+        req.petOwnerRole = petOwnershipRecord.role;
 
         next();
     } catch (error) {
@@ -27,22 +29,7 @@ async function authenticatePetOwner(req, res, next) {
 
 async function authorizePetOwner(req, res, next) {
     try {
-        const userId = req.user.sub;
-        const petId = req.params.petId || req.body.petId;
-
-        if (!petId) return error(res, "Không tìm thấy bản ghi thú cưng.", 404);
-
-        const petOwnerRecord = await PetOwner.findOne({
-            petId: petId,
-            userId: userId,
-            deletedAt: null,
-        }).lean();
-
-        if (!petOwnerRecord) {
-            return error(res, "Không tìm thấy bản ghi chủ sở hữu thú cưng.", 404);
-        }
-
-        if (petOwnerRecord.role !== "owner") {
+        if (req.petOwnerRole !== "owner") {
             return error(res, "Không có quyền truy cập thông tin.", 403);
         }
 
@@ -51,3 +38,8 @@ async function authorizePetOwner(req, res, next) {
         return next(error);
     }
 }
+
+module.exports = {
+    authenticatePetOwner,
+    authorizePetOwner,
+};

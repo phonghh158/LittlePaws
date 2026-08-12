@@ -36,6 +36,12 @@ function globalErrorHandler(err, req, res, next) {
         message = `Dữ liệu đã tồn tại trong hệ thống: ${field}`;
     }
 
+    // Xử lý lỗi MongoDB: Không tìm thấy dữ liệu trong cơ sở dữ liệu
+    if (err.message === "DataNotFound") {
+        statusCode = StatusCodes.NOT_FOUND;
+        message = "Không tìm thấy dữ liệu trong cơ sở dữ liệu.";
+    }
+
     // Xử lý lỗi JWT: JsonWebTokenError (Token sai định dạng hoặc bị chỉnh sửa)
     if (err.name === "JsonWebTokenError") {
         statusCode = StatusCodes.UNAUTHORIZED;

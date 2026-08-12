@@ -1,8 +1,8 @@
-// src/models/pet-owner.model.js
+// src/models/pet-ownership.model.js
 const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
-const petOwnerSchema = new mongoose.Schema(
+const petOwnershipSchema = new mongoose.Schema(
     {
         petId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -37,9 +37,10 @@ const petOwnerSchema = new mongoose.Schema(
 );
 
 // Index
-petOwnerSchema.index({ userId: 1, petId: 1 }, { unique: true });
+petOwnershipSchema.index({ userId: 1, petId: 1 }, { unique: true });
+petOwnershipSchema.index({ petId: 1 });
 
 // plugin
-petOwnerSchema.plugin(mongoosePaginate);
+petOwnershipSchema.plugin(mongoosePaginate);
 
-module.exports = mongoose.model("PetOwner", petOwnerSchema);
+module.exports = mongoose.model("PetOwnership", petOwnershipSchema);

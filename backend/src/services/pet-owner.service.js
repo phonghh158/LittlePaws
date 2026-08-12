@@ -2,10 +2,11 @@
 const dayjs = require("dayjs");
 
 const Pet = require("../models/pet.model");
-const PetOwner = require("../models/pet-owner.model");
+const PetOwnership = require("../models/pet-ownership.model");
 const PetOwnerInvitation = require("../models/pet-owner-invitation.model");
 
 const PetOwnerHelper = require("../services/helper/pet-owner.helper");
+const { populate } = require("../models/user.model");
 
 /**
  * CREATE
@@ -15,9 +16,7 @@ const PetOwnerHelper = require("../services/helper/pet-owner.helper");
  * @param { String } inviteeId - ID người được mời
  */
 async function invitePetOwner(petId, inviterId, inviteeId) {
-    await PetOwnerHelper.isPetOwner(petId, inviterId);
-
-    const inviteeIsPetOwner = await PetOwner.exists({
+    const inviteeIsPetOwner = await PetOwnership.exists({
         petId: petId,
         userId: inviteeId,
         deletedAt: null,
@@ -32,13 +31,19 @@ async function invitePetOwner(petId, inviterId, inviteeId) {
     const invitation = await PetOwnerInvitation.findOne({
         petId: petId,
         inviteeId: inviteeId,
+        status: "pending",
         expiresAt: { $gt: dayjs().toDate() },
     });
 
     if (invitation) {
         return await PetOwnerInvitation.updateOne(
             { _id: invitation._id },
-            { expiresAt: dayjs().add(3, "day").toDate() },
+            {
+                inviterId: inviterId,
+                inviteeId: inviteeId,
+                status: "pending",
+                expiresAt: dayjs().add(3, "day").toDate(),
+            },
         );
     }
 
@@ -62,6 +67,7 @@ async function respondPetOwnerInvitation(petId, inviteeId, inviteeResponse) {
     const invitation = await PetOwnerInvitation.findOne({
         petId: petId,
         inviteeId: inviteeId,
+        status: "pending",
         expiresAt: { $gt: dayjs().toDate() },
     });
 
@@ -82,17 +88,25 @@ async function respondPetOwnerInvitation(petId, inviteeId, inviteeResponse) {
         { _id: invitation._id },
         { status: "accepted" },
     );
+
     if (!acceptedPetOwnerInvitation) {
         throw new Error("Có lỗi trong quá trình cập nhật phản hồi.");
     }
 
     try {
-        const petOwnerData = {
+        return await PetOwnership.create({
             petId: petId,
             userId: inviteeId,
-        };
-
-        return await PetOwner.create(petOwnerData);
+        }).populate([
+            {
+                path: "userId",
+                select: "username fullName avatarUrl",
+            },
+            {
+                path: "petId",
+                select: "name nickname avatarUrl",
+            },
+        ]);
     } catch (error) {
         console.log("[ERROR]: Có lỗi trong quá trình tạo bản ghi đồng sở hữu.");
         console.log("[ROLLBACK]: Thay đổi lại bản ghi lời mời.");
@@ -134,9 +148,23 @@ async function getPetOwnerInvitationByUserId(userId, query) {
         page: parseInt(page, 10),
         limit: 9,
         sort: sort ? sort : { createdAt: -1 },
+        populate: [
+            {
+                path: "petId",
+                select: "name avatarUrl",
+            },
+            {
+                path: "inviterId",
+                select: "username fullName avatarUrl",
+            },
+            {
+                path: "inviteeId",
+                select: "username fullName avatarUrl",
+            },
+        ],
     };
 
-    return await PetOwnerInvitation.paginate({ inviteeId: userId }, options);
+    return await PetOwnerInvitation.paginate(filter, options);
 }
 
 /**
@@ -162,9 +190,15 @@ async function getPetOwnersByPetId(petId, query) {
         page: parseInt(page, 10),
         limit: 9,
         sort: sort ? sort : { createdAt: -1 },
+        populate: [
+            {
+                path: "userId",
+                select: "username fullName avatarUrl",
+            },
+        ],
     };
 
-    return await PetOwner.paginate(filter, options);
+    return await PetOwnership.paginate(filter, options);
 }
 
 /**
@@ -176,7 +210,7 @@ async function getPetOwnersByPetId(petId, query) {
  * @returns Bản ghi đồng sở hữu
  */
 async function updatePetOwnerRelationship(petId, ownerId, relationship) {
-    const updatedPetOwner = await PetOwner.findOneAndUpdate(
+    const updatedPetOwner = await PetOwnership.findOneAndUpdate(
         {
             petId: petId,
             userId: ownerId,
@@ -186,12 +220,21 @@ async function updatePetOwnerRelationship(petId, ownerId, relationship) {
             relationship: relationship.trim(),
         },
         { new: true, runValidators: true },
-    );
+    )
+        .populate([
+            {
+                path: "userId",
+                select: "username fullName avatarUrl",
+            },
+            {
+                path: "petId",
+                select: "name nickname avatarUrl",
+            },
+        ])
+        .lean();
 
     if (!updatedPetOwner) {
-        const error = new Error("Không tìm thấy đồng sở hữu.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return updatedPetOwner;
@@ -205,27 +248,30 @@ async function updatePetOwnerRelationship(petId, ownerId, relationship) {
  * @param { String } coOwnerId - ID người đồng sở hữu
  * @param { String } role - Role
  */
-async function updatePetOwnerRole(petId, ownerId, coOwnerId, role) {
-    await isPetOwner(petId, ownerId);
-
-    const petCoOwnerRecord = await PetOwner.findOne({
+async function updatePetOwnerRole(petId, ownerId) {
+    const petOwnerRecord = await PetOwnership.findOne({
         petId: petId,
-        userId: coOwnerId,
+        userId: ownerId,
         deletedAt: null,
-    });
+    }).populate([
+        {
+            path: "userId",
+            select: "username fullName avatarUrl",
+        },
+        {
+            path: "petId",
+            select: "name nickname avatarUrl",
+        },
+    ]);
 
-    if (!petCoOwnerRecord) {
-        const error = new Error("Người dùng này không phải chủ sở hữu của bé pet này.");
-        error.status = 404;
-        throw error;
+    if (!petOwnerRecord) {
+        throw new Error("DataNotFound");
     }
 
-    if (petCoOwnerRecord.role === "co-owner") role = "owner";
-    else role = "co-owner";
+    petOwnerRecord.role = petOwnerRecord.role === "co-owner" ? "owner" : "co-owner";
 
-    return await petCoOwnerRecord.save({ role: role });
+    return await petOwnerRecord.save();
 }
-
 /**
  * DELETE
  * Kick out người đồng sở hữu
@@ -233,58 +279,41 @@ async function updatePetOwnerRole(petId, ownerId, coOwnerId, role) {
  * @param { String } ownerId - ID người sở hữu
  * @param { String } coOwnerId - ID người đồng sở hữu
  */
-async function kickPetOwner(petId, ownerId, coOwnerId, role) {
-    const petOwnerRecord = await PetOwner.findOne({
+async function kickPetOwner(petId, ownerId) {
+    const petOwnerOut = await PetOwnership.findOne({
         petId: petId,
         userId: ownerId,
         deletedAt: null,
-    });
+    }).populate([
+        {
+            path: "userId",
+            select: "username fullName avatarUrl",
+        },
+        {
+            path: "petId",
+            select: "name nickname avatarUrl",
+        },
+    ]);
 
-    if (!petOwnerRecord) {
-        const error = new Error("Không tìm thấy bản ghi thú cưng.");
-        error.status = 404;
-        throw error;
+    if (!petOwnerOut) {
+        throw new Error("DataNotFound");
     }
 
-    if (petOwnerRecord.role !== "owner") {
-        if (ownerId === coOwnerId) {
-            return await PetOwner.deleteOne({ petId: petId, userId: ownerId });
-        }
-
-        const error = new Error("Không có quyền thay đổi role của người khác.");
-        error.status = 403;
-        throw error;
-    }
-
-    if (ownerId === coOwnerId) {
-        const petOwnersRecord = await PetOwner.find({
-            petId: petId,
-            deletedAt: null,
-            role: "owner",
-        });
-
-        if (petOwnersRecord.length === 1) {
-            const error = new Error(
-                "Thú cưng chỉ có một chủ sở hữu duy nhất, nếu bạn không còn là chủ sở hữu, bạn phải chuyển quyền này cho người khác.",
-            );
-            error.status = 400;
-            throw error;
-        }
-    }
-
-    const petCoOwnerRecord = await PetOwner.findOne({
+    const petOwnerRecordQuantity = await PetOwnership.countDocuments({
         petId: petId,
-        userId: coOwnerId,
+        role: "owner",
         deletedAt: null,
     });
 
-    if (!petCoOwnerRecord) {
-        const error = new Error("Người dùng này không phải chủ sở hữu của bé pet này.");
-        error.status = 404;
+    if (petOwnerRecordQuantity === 1 && petOwnerOut.role === "owner") {
+        const error = new Error(
+            "Thú cưng phải có một chủ sở hữu chính.\n Nếu bạn muốn out hãy chuyển chức vụ cho một người khác.",
+        );
+        error.status = 400;
         throw error;
     }
 
-    return await PetOwner.deleteOne({ petId: petId, userId: coOwnerId });
+    return await PetOwner.deleteOne({ petId: petId, userId: ownerId });
 }
 
 module.exports = {

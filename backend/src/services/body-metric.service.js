@@ -9,14 +9,11 @@ const PetOwnerHelper = require("../services/helper/pet-owner.helper");
 /**
  * CREATE
  * Thêm mới bản ghi chỉ số cơ thể (cân nặng) cho thú cưng
- * @param { String } ownerId - ID người dùng
  * @param { String } petId - ID thú cưng
  * @param { Object } metricData - Dữ liệu chỉ số
  * @returns Bản ghi chỉ số vừa tạo
  */
-async function createBodyMetric(ownerId, petId, metricData) {
-    await PetOwnerHelper.isPetOwnership(petId, ownerId);
-
+async function createBodyMetric(petId, metricData) {
     const { weight, recordedAt } = metricData;
 
     return await BodyMetric.create({
@@ -29,14 +26,11 @@ async function createBodyMetric(ownerId, petId, metricData) {
 /**
  * GET
  * Lấy danh sách lịch sử chỉ số cơ thể của thú cưng
- * @param { String } ownerId - ID người dùng
  * @param { String } petId - ID thú cưng
  * @param { Object } query - Object query (page, limit, sort)
  * @returns Danh sách bản ghi chỉ số (có phân trang)
  */
-async function getAllBodyMetrics(ownerId, petId, query) {
-    await PetOwnerHelper.isPetOwnership(petId, ownerId);
-
+async function getAllBodyMetrics(petId, query) {
     const { page = 1, limit = 10, sort } = query;
 
     const filter = {
@@ -46,7 +40,11 @@ async function getAllBodyMetrics(ownerId, petId, query) {
     const options = {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10),
-        sort: sort ? sort : { recordedAt: -1 }, // Mặc định xếp mới nhất lên trước theo chuẩn index đã tạo[cite: 7]
+        sort: sort ? sort : { recordedAt: -1 },
+        populate: {
+            path: "petId",
+            select: "name dob gender avatarUrl",
+        },
     };
 
     return await BodyMetric.paginate(filter, options);
@@ -55,20 +53,17 @@ async function getAllBodyMetrics(ownerId, petId, query) {
 /**
  * GET
  * Lấy chi tiết một bản ghi chỉ số cơ thể
- * @param { String } ownerId - ID người dùng
  * @param { String } petId - ID thú cưng
  * @param { String } metricId - ID bản ghi chỉ số
  * @returns Thông tin chi tiết bản ghi
  */
-async function getBodyMetricById(ownerId, petId, metricId) {
-    await PetOwnerHelper.isPetOwnership(petId, ownerId);
-
-    const metric = await BodyMetric.findOne({ _id: metricId, petId: petId }).lean();
+async function getBodyMetricById(petId, metricId) {
+    const metric = await BodyMetric.findOne({ _id: metricId, petId: petId })
+        .populate("petId", "name dob gender avatarUrl")
+        .lean();
 
     if (!metric) {
-        const error = new Error("Không tìm thấy bản ghi chỉ số cơ thể này.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return metric;
@@ -77,15 +72,12 @@ async function getBodyMetricById(ownerId, petId, metricId) {
 /**
  * UPDATE
  * Cập nhật thông tin bản ghi chỉ số cơ thể
- * @param { String } ownerId - ID người dùng
  * @param { String } petId - ID thú cưng
  * @param { String } metricId - ID bản ghi chỉ số
  * @param { Object } updateData - Dữ liệu cần cập nhật
  * @returns Thông tin bản ghi sau khi cập nhật
  */
-async function updateBodyMetric(ownerId, petId, metricId, updateData) {
-    await PetOwnerHelper.isPetOwnership(petId, ownerId);
-
+async function updateBodyMetric(petId, metricId, updateData) {
     const updatedMetric = await BodyMetric.findOneAndUpdate(
         { _id: metricId, petId: petId },
         updateData,
@@ -93,12 +85,12 @@ async function updateBodyMetric(ownerId, petId, metricId, updateData) {
             new: true,
             runValidators: true,
         },
-    ).lean();
+    )
+        .populate("petId", "name dob gender avatarUrl")
+        .lean();
 
     if (!updatedMetric) {
-        const error = new Error("Không tìm thấy bản ghi chỉ số cơ thể này để cập nhật.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return updatedMetric;
@@ -112,18 +104,14 @@ async function updateBodyMetric(ownerId, petId, metricId, updateData) {
  * @param { String } metricId - ID bản ghi chỉ số
  * @returns Thông tin bản ghi vừa xóa
  */
-async function deleteBodyMetric(ownerId, petId, metricId) {
-    await PetOwnerHelper.isPetOwnership(petId, ownerId);
-
+async function deleteBodyMetric(petId, metricId) {
     const deletedMetric = await BodyMetric.findOneAndDelete({
         _id: metricId,
         petId: petId,
-    }).lean();
+    });
 
     if (!deletedMetric) {
-        const error = new Error("Không tìm thấy bản ghi chỉ số cơ thể này để xóa.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return deletedMetric;

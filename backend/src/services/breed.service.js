@@ -7,19 +7,10 @@ const Species = require("../models/species.model");
 /**
  * CREATE: Tạo giống loài thú cưng mới
  * Just Admin
- * @param {Object} data - Dữ liệu giống loài (name, description, speciesId)
+ * @param {Object} data - Dữ liệu giống loài (species, name, description)
  * @returns Thông tin giống loài vừa tạo
  */
 async function createBreed(data) {
-    const { speciesId } = data;
-
-    const isSpeciesExist = await Species.exists({ _id: speciesId });
-    if (!isSpeciesExist) {
-        const error = new Error("Không tìm thấy loài thú cưng.");
-        error.status = 404;
-        throw error;
-    }
-
     return await Breed.create(data);
 }
 
@@ -28,19 +19,20 @@ async function createBreed(data) {
  * @param { Object } query - Object chứa thông tin query
  * @returns Danh sách giống loài đã phân trang
  */
-async function getAllBreeds(query, isDelete) {
-    const { keyword = "", page = 1, sort } = query;
+async function getAllBreeds(query) {
+    const { page = 1, sort } = query;
+    const { name, species } = query;
 
-    let filter = {};
+    let filter = {
+        deletedAt: null,
+    };
 
-    if (isDelete === "true") {
-        filter.deletedAt = { $ne: null };
-    } else if (isDelete === "false") {
-        filter.deletedAt = null;
+    if (species) {
+        filter.species = species;
     }
 
-    if (keyword) {
-        filter.name = { $regex: keyword, $options: "i" };
+    if (name) {
+        filter.name = { $regex: name, $options: "i" };
     }
 
     // Cấu hình options cho mongoose-paginate-v2
@@ -59,16 +51,11 @@ async function getAllBreeds(query, isDelete) {
  * @param {boolean} isUser - Admin hay User gọi hàm
  * @returns Thông tin giống loại
  */
-async function getBreedById(breedId, isUser = true) {
-    let breed;
-
-    if (isUser) breed = await Breed.findOne({ _id: breedId, deletedAt: null });
-    else breed = await Breed.findOne({ _id: breedId });
+async function getBreedById(breedId) {
+    const breed = await Breed.findOne({ _id: breedId, deletedAt: null });
 
     if (!breed) {
-        const error = new Error("Không tìm thấy giống thú cưng.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return breed;
@@ -79,31 +66,17 @@ async function getBreedById(breedId, isUser = true) {
  * Không cho phép cập nhật deletedAt
  * Just Admin
  * @param { String } breedId - ID giống loại
- * @param { Object } updateData - Dữ liệu cập nhật
+ * @param { Object } updateData - Dữ liệu cập nhật (species, name, description)
  * @returns Thông tin giống loại sau khi cập nhật
  */
 async function updateBreed(breedId, updateData) {
-    const { speciesId } = updateData;
-
-    if (speciesId) {
-        const isSpeciesExist = await Species.exists({ _id: speciesId });
-
-        if (!isSpeciesExist) {
-            const error = new Error("Không tìm thấy loài thú cưng.");
-            error.status = 404;
-            throw error;
-        }
-    }
-
     const breed = await Breed.findOneAndUpdate({ _id: breedId }, updateData, {
         new: true,
         runValidators: true,
     });
 
     if (!breed) {
-        const error = new Error("Không tìm thấy giống thú cưng.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return breed;
@@ -123,9 +96,7 @@ async function deleteBreed(breedId) {
     );
 
     if (!breed) {
-        const error = new Error("Không tìm thấy giống thú cưng.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return breed;
@@ -147,9 +118,7 @@ async function restoreBreed(breedId) {
     );
 
     if (!breed) {
-        const error = new Error("Không tìm thấy giống thú cưng hoặc chưa bị xóa.");
-        error.status = 404;
-        throw error;
+        throw new Error("DataNotFound");
     }
 
     return breed;
