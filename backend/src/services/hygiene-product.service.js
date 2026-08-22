@@ -77,12 +77,11 @@ async function createHygieneProduct(productData, scentsData) {
  * GET ALL
  * Lấy danh sách bản ghi sản phẩm vệ sinh
  * @param { Object } query - query
- * @param { String } userId - ID người dùng hiện tại
  * @returns Danh sách bản ghi sản phẩm vệ sinh
  */
-async function getAllHygieneProducts(query, userId) {
+async function getAllHygieneProducts(query) {
     const { page = 1, limit = 10, sort } = query;
-    const { species, brandIds, categories, ofUser } = query;
+    const { species, brandIds, categories } = query;
 
     const filter = {
         deletedAt: null,
@@ -110,10 +109,6 @@ async function getAllHygieneProducts(query, userId) {
         if (categoriesArray.length > 0) {
             filter.category = { $in: categoriesArray };
         }
-    }
-
-    if (ofUser) {
-        filter.createdBy = userId;
     }
 
     const options = {

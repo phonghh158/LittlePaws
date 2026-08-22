@@ -74,12 +74,11 @@ async function createFood(foodData, flavorsData) {
  * GET ALL
  * Lấy danh sách bản ghi thức ăn thú cưng
  * @param { Object } query - query
- * @param { String } userId - ID người dùng hiện tại
  * @returns Danh sách bản ghi thức ăn
  */
-async function getAllFoods(query, userId) {
+async function getAllFoods(query) {
     const { page = 1, limit = 10, sort } = query;
-    const { species, brandIds, categories, ofUser } = query;
+    const { species, brandIds, categories } = query;
 
     const filter = {
         deletedAt: null,
@@ -107,10 +106,6 @@ async function getAllFoods(query, userId) {
         if (categoriesArray.length > 0) {
             filter.category = { $in: categoriesArray };
         }
-    }
-
-    if (ofUser) {
-        filter.createdBy = userId;
     }
 
     const options = {

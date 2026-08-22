@@ -1,7 +1,8 @@
 // src/models/bill.model.js
 const mongoose = require("mongoose");
+const mongoosePaginate = require("mongoose-paginate-v2");
 
-// Định nghĩa sub-schema cho các mặt hàng trong hóa đơn
+// Sub-schema cho các mặt hàng trong hóa đơn
 const billItemSchema = new mongoose.Schema(
     {
         itemRefId: {
@@ -12,21 +13,33 @@ const billItemSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        // Giá của một sản phẩm, tổng giá không cần lưu trong db, sẽ được tính ở service.
         price: {
             type: Number,
             required: true,
         },
     },
     { _id: false },
-); // Tắt tự tạo _id cho từng item con để dữ liệu nhẹ hơn
+);
 
-// Định nghĩa schema chính cho hóa đơn
+// Schema chính cho hóa đơn
 const billSchema = new mongoose.Schema(
     {
-        petId: {
+        // Người tạo hóa đơn
+        userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Pet",
+            ref: "User",
             required: true,
+        },
+        // Nhóm thú cưng
+        familyId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Family",
+            required: true,
+        },
+        items: {
+            type: [billItemSchema],
+            validate: [(val) => val.length >= 1, "Hóa đơn phải có ít nhất một sản phẩm."],
         },
         purchaseDate: {
             type: Date,
@@ -41,10 +54,6 @@ const billSchema = new mongoose.Schema(
             default: "",
             trim: true,
         },
-        items: {
-            type: [billItemSchema],
-            validate: [(val) => val.length >= 1, "Hóa đơn phải có ít nhất một sản phẩm."],
-        },
         deletedAt: {
             type: Date,
             default: null,
@@ -57,8 +66,11 @@ const billSchema = new mongoose.Schema(
     },
 );
 
-// Index tìm kiếm hóa đơn theo thú cưng
-billSchema.index({ petId: 1 });
+// Index tìm kiếm hóa đơn theo gia đình
+billSchema.index({ familyId: 1 });
+
+// Index tìm kiếm hóa đơn theo người tạo
+billSchema.index({ userId: 1 });
 
 // Index hỗ trợ thống kê chi tiêu theo thời gian
 billSchema.index({ purchaseDate: 1 });

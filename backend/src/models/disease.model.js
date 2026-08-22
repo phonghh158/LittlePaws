@@ -35,12 +35,6 @@ const diseaseSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
-        slug: {
-            type: String,
-            unique: true,
-            required: true,
-            trim: true,
-        },
         description: {
             type: String,
             default: "",

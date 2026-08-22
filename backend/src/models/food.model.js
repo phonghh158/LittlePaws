@@ -25,11 +25,6 @@ const foodSchema = new mongoose.Schema(
                     "Nếu chọn loại 'Khác', chỉ được phép có duy nhất giá trị này. Mảng cũng không được để rỗng.",
             },
         },
-        createdBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            default: null,
-        },
         brandId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "PetCareBrand",

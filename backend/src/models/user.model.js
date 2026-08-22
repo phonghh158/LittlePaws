@@ -68,7 +68,6 @@ const userSchema = new mongoose.Schema(
 
 // Khu vực cấu hình index
 userSchema.index({ username: "text", fullName: "text" });
-userSchema.index({ status: 1 });
 userSchema.index({ deletedAt: 1 });
 
 // Plugin

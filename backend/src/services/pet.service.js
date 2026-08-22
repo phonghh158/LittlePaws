@@ -1,22 +1,21 @@
-// src/services/species.service.js
-// Service for user
+// src/services/pet.service.js
 const dayjs = require("dayjs");
 
 const User = require("../models/user.model");
 const Pet = require("../models/pet.model");
-const PetOwnership = require("../models/pet-ownership.model");
+const Home = require("../models/home.model");
 
 const { PET_AVATAR } = require("../constants/default-avatar");
 
 /**
  * CREATE
  * Tạo mới bản ghi thú cưng
- * @param { Object } ownerData - Dữ liệu của chủ sở hữu
+ * @param { String } ownerId - ID người dùng
+ * @param { String } homeId - ID gia đình
  * @param { Object } petData - Dữ liệu thú cưng
  * @returns Thông tin thú cưng vừa tạo
  */
-async function addPet(ownerData, petData) {
-    let { ownerId, relationship } = ownerData;
+async function addPet(ownerId, homeId, petData) {
     let { name, nickname, breedId, gender, dob, adoptionDate, avatarUrl } = petData;
 
     const owner = await User.findOne({ _id: ownerId, deletedAt: null }).select(
@@ -44,33 +43,27 @@ async function addPet(ownerData, petData) {
     });
 
     try {
-        if (!relationship) {
-            if (owner.gender === "male") {
-                relationship = "Anh";
-            } else if (owner.gender === "female") {
-                relationship = "Chị";
-            } else {
-                relationship = "Loài người";
-            }
+        let family;
+        if (familyId) {
+            family = await Family.findOneAndUpdate(
+                { _id: familyId, deletedAt: null },
+                { $push: { petIds: pet._id } },
+                { new: true },
+            );
+        } else {
+            family = await Family.create({
+                name: `Gia đình của ${pet.name}`,
+                petIds: [pet._id],
+                ownership: [{ userId: ownerId, role: "owner" }],
+            });
         }
-
-        const petOwnership = await PetOwnership.create({
-            userId: ownerId,
-            petId: pet._id,
-            relationship: relationship,
-            role: "owner",
-        });
 
         return {
             pet: pet,
-            petOwnership: {
-                owner: owner,
-                relationship: petOwnership.relationship,
-                role: petOwnership.role,
-            },
+            family: family,
         };
     } catch (error) {
-        console.log("[ERROR]: Lỗi trong quá trình tạo bản ghi PetOwnership: ", error);
+        console.log("[ERROR]: Lỗi trong quá trình tạo/cập nhật bản ghi Family: ", error);
         console.log("[ROLLBACK]: Tiến hành rollback. Xóa bản ghi Pet đã tạo.");
 
         try {
@@ -94,23 +87,27 @@ async function addPet(ownerData, petData) {
  * @returns Danh sách thú cưng
  */
 async function getAllPets(ownerId, query) {
-    const petIdList = await PetOwnership.find({ userId: ownerId, deletedAt: null }, "petId");
+    const families = await Family.find(
+        { "ownership.userId": ownerId, deletedAt: null },
+        "petIds",
+    ).lean();
 
     const { keyword = "", page = 1, sort } = query;
-    const limit = 5;
+
+    const petIdList = families.flatMap((family) => family.petIds);
 
     if (petIdList.length === 0) {
         return {
             docs: [],
             totalDocs: 0,
-            limit: limit,
+            limit: 5,
             page: parseInt(page, 10),
             totalPages: 0,
         };
     }
 
     let filter = {
-        _id: { $in: petIdList.map((item) => item.petId) },
+        _id: { $in: petIdList },
         deletedAt: null,
     };
 
@@ -120,7 +117,7 @@ async function getAllPets(ownerId, query) {
 
     const options = {
         page: parseInt(page, 10),
-        limit: limit,
+        limit: 5,
         sort: sort ? sort : { createdAt: -1 },
         populate: [
             {
@@ -136,8 +133,6 @@ async function getAllPets(ownerId, query) {
 /**
  * GET
  * Lấy bản ghi thú cưng theo ID
- * @param { String } petId - ID bản ghi thú cưng
- * @returns Thông tin thú cưng
  */
 async function getPetById(petId) {
     const pet = await Pet.findOne({
@@ -148,21 +143,18 @@ async function getPetById(petId) {
             path: "breedId",
             select: "species name",
         })
-        .select("-deletedAt")
         .lean();
 
     if (!pet) {
         throw new Error("DataNotFound");
     }
+
+    return pet;
 }
 
 /**
  * UPDATE
  * Cập nhật bản ghi thú cưng
- * Không cho phép cập nhật deletedAt, isNeutered, status, breedId
- * @param { String } petId - ID bản ghi thú cưng
- * @param { Object } updateData - Dữ liệu cập nhật
- * @returns Thông tin bản ghi thú cưng sau khi cập nhật
  */
 async function updatePet(petId, updateData) {
     const updatedPet = await Pet.findOneAndUpdate({ _id: petId, deletedAt: null }, updateData, {
@@ -173,7 +165,6 @@ async function updatePet(petId, updateData) {
             path: "breedId",
             select: "species name",
         })
-        .select("-deletedAt")
         .lean();
 
     if (!updatedPet) {
@@ -186,10 +177,6 @@ async function updatePet(petId, updateData) {
 /**
  * UPDATE
  * Thay đổi giống loài của bạn pet.
- * @param { String } petId - ID thú cưng
- * @param { String } ownerId - ID chủ sở hữu thực hiện thao tác
- * @param { String } breedId - ID Breed
- * @returns Thông tin thú cưng sau khi cập nhật
  */
 async function updatePetBreed(petId, breedId) {
     const updatedPet = await Pet.findOneAndUpdate(
@@ -216,10 +203,7 @@ async function updatePetBreed(petId, breedId) {
 
 /**
  * UPDATE
- * Cập nhật nhanh trạng thái của thú cưng (alive, lost, gone, other)
- * @param { String } petId - ID thú cưng
- * @param { String } newStatus - Trạng thái mới cần cập nhật
- * @returns Thông tin thú cưng sau khi cập nhật
+ * Cập nhật nhanh trạng thái của thú cưng
  */
 async function updatePetStatus(petId, newStatus) {
     const updatedPet = await Pet.findOneAndUpdate(
@@ -243,10 +227,6 @@ async function updatePetStatus(petId, newStatus) {
 /**
  * DELETE
  * Xóa bản ghi thú cưng
- * Soft Delete
- * @param { String } petId - ID bản ghi thú cưng
- * @param { String } reason - Lý do xóa
- * @returns Thông tin bản ghi thú cưng sau khi xóa
  */
 async function deletePet(petId) {
     const deletedPet = await Pet.findOneAndUpdate(
@@ -259,36 +239,12 @@ async function deletePet(petId) {
         throw new Error("DataNotFound");
     }
 
-    try {
-        await PetOwnership.updateMany(
-            { petId: petId, deletedAt: null },
-            { deletedAt: dayjs().toDate() },
-        );
-    } catch (error) {
-        console.log("[ERROR]: Có lỗi trong quá trình xóa bản ghi chủ sở hữu thú cưng.");
-        console.log("[ROLLBACK]: Khôi phục bản ghi thú cưng.");
-        try {
-            await Pet.updateOne({ _id: petId }, { deletedAt: null });
-        } catch (rollbackError) {
-            console.log("[ERROR]: Có lỗi trong quá trình rollback bản ghi thú cưng.");
-            console.log("[ERROR]: Thông tin lỗi", rollbackError);
-            console.log(
-                "[ROLLBACK]: Vui lòng cập nhật thủ công để tránh gây gián đoạn hệ thống.",
-            );
-            console.log("[ROLLBACK]: Id bản ghi thú cưng: ", petId);
-        }
-
-        throw error;
-    }
-
     return deletedPet;
 }
 
 /**
  * UPDATE
  * Khôi phục thú cưng đã bị xóa mềm
- * @param { String } petId - ID thú cưng
- * @returns Thông tin thú cưng sau khi khôi phục
  */
 async function restorePet(petId) {
     const restoredPet = await Pet.findOneAndUpdate(
@@ -304,31 +260,6 @@ async function restorePet(petId) {
         throw new Error("DataNotFound");
     }
 
-    try {
-        await PetOwnership.updateMany(
-            { petId: petId, deletedAt: { $ne: null } },
-            { deletedAt: null },
-        );
-    } catch (error) {
-        console.log("[ERROR]: Có lỗi trong quá trình khôi phục bản ghi chủ sở hữu thú cưng.");
-        console.log(
-            "[ROLLBACK]: Hủy bỏ khôi phục, đưa bản ghi thú cưng về lại trạng thái xóa mềm.",
-        );
-
-        try {
-            await Pet.updateOne({ _id: petId }, { deletedAt: dayjs().toDate() });
-        } catch (rollbackError) {
-            console.log("[ERROR]: Có lỗi trong quá trình rollback bản ghi thú cưng.");
-            console.log("[ERROR]: Thông tin lỗi", rollbackError);
-            console.log(
-                "[ROLLBACK]: Vui lòng cập nhật thủ công để tránh gây gián đoạn hệ thống.",
-            );
-            console.log("[ROLLBACK]: Id bản ghi thú cưng: ", petId);
-        }
-
-        throw error;
-    }
-
     return restoredPet;
 }
 
@@ -337,6 +268,8 @@ module.exports = {
     getAllPets,
     getPetById,
     updatePet,
+    updatePetBreed,
+    updatePetStatus,
     deletePet,
     restorePet,
 };

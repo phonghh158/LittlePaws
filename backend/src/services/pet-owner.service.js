@@ -5,9 +5,6 @@ const Pet = require("../models/pet.model");
 const PetOwnership = require("../models/pet-ownership.model");
 const PetOwnerInvitation = require("../models/pet-owner-invitation.model");
 
-const PetOwnerHelper = require("../services/helper/pet-owner.helper");
-const { populate } = require("../models/user.model");
-
 /**
  * CREATE
  * Gửi lời mời trở thành đồng sở hữu của thú cưng

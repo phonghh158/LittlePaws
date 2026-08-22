@@ -4,6 +4,11 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 
 const petSchema = new mongoose.Schema(
     {
+        homeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Family",
+            required: true,
+        },
         name: {
             type: String,
             required: true,
@@ -58,6 +63,7 @@ const petSchema = new mongoose.Schema(
             type: Date,
             default: null,
             expires: "60d",
+            select: false,
         },
     },
     {
@@ -67,6 +73,7 @@ const petSchema = new mongoose.Schema(
 
 // Khu vực cấu hình index
 petSchema.index({ name: "text" });
+petSchema.index({ familyId: 1 });
 petSchema.index({ breedId: 1 });
 petSchema.index({ status: 1 });
 petSchema.index({ deletedAt: 1 });
